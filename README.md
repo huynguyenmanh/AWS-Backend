@@ -5,9 +5,6 @@ backend runs in AWS Lambda behind API Gateway and stores user-owned records in
 DynamoDB. Task images and profile avatars are stored privately in S3 and are
 accessed with short-lived presigned URLs.
 
-The task-tag feature has been removed. The supported workflow entities are
-statuses and categories.
-
 ## Project structure
 
 ```text
@@ -104,9 +101,6 @@ Upload `todo-backend.zip` to the Lambda function and set the handler to:
 lambda_function.lambda_handler
 ```
 
-The Lambda runtime already includes `boto3`; the backend has no additional
-third-party runtime dependencies.
-
 ## Lambda execution role
 
 Attach the custom policy in `iam/lambda-execution-policy.json` to the Lambda
@@ -132,8 +126,7 @@ log streams.
 
 The IAM document is a template. Before attaching it, replace
 `YOUR_AWS_REGION`, `YOUR_AWS_ACCOUNT_ID`, `YOUR_TABLE_NAME`,
-`YOUR_ATTACHMENTS_BUCKET`, and `YOUR_USER_POOL_ID`. Do not commit the completed
-account-specific policy to a shared or public repository.
+`YOUR_ATTACHMENTS_BUCKET`, and `YOUR_USER_POOL_ID`. 
 
 `GetUser` and `UpdateUserAttributes` are called with the authenticated user's
 Cognito access token. The four `Admin...` operations in the custom policy are
@@ -142,17 +135,7 @@ the Cognito operations authorized through the Lambda execution role.
 ## API documentation boundary
 
 `api/openapi.yaml` is an HTTP contract and documentation file based on the
-supplied OpenAPI document. It has been updated only for the confirmed removal
-of task tags:
-
-- Removed the `tagId` task query parameter
-- Removed `TagId` and `TagPathId`
-- Removed `tagIds` from task input
-- Removed `tagIds` from saved-filter fields
-- Removed `tag` from statistics grouping
-
-OpenAPI's `tags:` keyword remains because it groups operations into sections
-such as Profile, Tasks, and Statistics. It is unrelated to task tags.
+supplied OpenAPI document. 
 
 The supplied document does not contain AWS-specific
 `x-amazon-apigateway-integration` or authorizer extensions. Consequently, it
@@ -178,10 +161,5 @@ The access token is a JWT whose payload contains:
 
 Do not substitute the Cognito ID token. The backend calls Cognito `GetUser`,
 which requires the access token.
-
-Every protected request also calls `AdminGetUser` to verify that the Cognito
-account still exists and is enabled. This closes the gap where a previously
-issued JWT could otherwise remain valid until its expiration time after account
-deletion.
 
 
