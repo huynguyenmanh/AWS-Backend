@@ -1,0 +1,53 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ApplicationDataAccess",
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:GetItem",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:Query",
+        "dynamodb:BatchWriteItem"
+      ],
+      "Resource": [
+        "arn:aws:dynamodb:YOUR_AWS_REGION:YOUR_AWS_ACCOUNT_ID:table/YOUR_TABLE_NAME",
+        "arn:aws:dynamodb:YOUR_AWS_REGION:YOUR_AWS_ACCOUNT_ID:table/YOUR_TABLE_NAME/index/*"
+      ]
+    },
+    {
+      "Sid": "ListUserAttachmentPrefix",
+      "Effect": "Allow",
+      "Action": "s3:ListBucket",
+      "Resource": "arn:aws:s3:::YOUR_ATTACHMENTS_BUCKET",
+      "Condition": {
+        "StringLike": {
+          "s3:prefix": "users/*"
+        }
+      }
+    },
+    {
+      "Sid": "ManageAttachments",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject"
+      ],
+      "Resource": "arn:aws:s3:::YOUR_ATTACHMENTS_BUCKET/users/*"
+    },
+    {
+      "Sid": "ManageCognitoAccount",
+      "Effect": "Allow",
+      "Action": [
+        "cognito-idp:AdminGetUser",
+        "cognito-idp:AdminUserGlobalSignOut",
+        "cognito-idp:AdminDisableUser",
+        "cognito-idp:AdminDeleteUser"
+      ],
+      "Resource": "arn:aws:cognito-idp:YOUR_AWS_REGION:YOUR_AWS_ACCOUNT_ID:userpool/YOUR_USER_POOL_ID"
+    }
+  ]
+}

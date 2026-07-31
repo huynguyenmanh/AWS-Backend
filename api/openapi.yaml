@@ -1,0 +1,530 @@
+openapi: 3.0.3
+info:
+  title: Todo and Note API
+  version: 1.0.0
+  description: HTTP API for the Cognito-authenticated serverless Todo application.
+servers:
+  - url: https://{apiId}.execute-api.{region}.amazonaws.com
+    variables:
+      apiId:
+        default: YOUR_API_ID
+      region:
+        default: YOUR_AWS_REGION
+security:
+  - CognitoBearer: []
+tags:
+  - name: Profile
+  - name: Tasks
+  - name: Attachments
+  - name: Workflow
+  - name: Filters
+  - name: ImportExport
+  - name: Statistics
+paths:
+  /profile:
+    get:
+      tags: [Profile]
+      operationId: getProfile
+      summary: Get the authenticated user's profile
+      responses:
+        "200": {$ref: "#/components/responses/Success"}
+    patch:
+      tags: [Profile]
+      operationId: updateProfile
+      summary: Update profile fields or request an email change
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/ProfileInput"}
+      responses:
+        "200": {$ref: "#/components/responses/Success"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+  /profile/avatar/upload-url:
+    post:
+      tags: [Profile]
+      operationId: createAvatarUploadUrl
+      summary: Create a temporary S3 URL for a profile image
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/AvatarUploadInput"}
+      responses:
+        "201": {$ref: "#/components/responses/Success"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+  /profile/avatar/confirm:
+    post:
+      tags: [Profile]
+      operationId: confirmAvatarUpload
+      summary: Confirm the profile image upload and save its S3 key
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [avatarKey]
+              properties:
+                avatarKey: {type: string}
+      responses:
+        "200": {$ref: "#/components/responses/Success"}
+        "409": {description: Upload not found in S3}
+  /profile/avatar:
+    delete:
+      tags: [Profile]
+      operationId: deleteAvatar
+      summary: Delete the current profile image
+      responses:
+        "204": {description: Profile image deleted}
+  /account:
+    delete:
+      tags: [Profile]
+      operationId: deleteAccount
+      summary: Delete the authenticated account and owned application data
+      responses:
+        "204": {description: Account deleted}
+  /tasks:
+    post:
+      tags: [Tasks]
+      operationId: createTask
+      summary: Create a task or initial draft
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/TaskInput"}
+      responses:
+        "201": {$ref: "#/components/responses/Success"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+    get:
+      tags: [Tasks]
+      operationId: listTasks
+      summary: List, search, filter, and date-query tasks
+      parameters:
+        - {$ref: "#/components/parameters/Search"}
+        - {$ref: "#/components/parameters/StatusId"}
+        - {$ref: "#/components/parameters/CategoryId"}
+        - {$ref: "#/components/parameters/Date"}
+        - {$ref: "#/components/parameters/FromDate"}
+        - {$ref: "#/components/parameters/ToDate"}
+        - {$ref: "#/components/parameters/BeforeDate"}
+        - {$ref: "#/components/parameters/FilterId"}
+        - {$ref: "#/components/parameters/RecordState"}
+        - {$ref: "#/components/parameters/SortBy"}
+        - {$ref: "#/components/parameters/Order"}
+      responses:
+        "200": {$ref: "#/components/responses/Success"}
+  /tasks/{taskId}:
+    parameters:
+      - {$ref: "#/components/parameters/TaskId"}
+    get:
+      tags: [Tasks]
+      operationId: getTask
+      summary: Get one owned task
+      responses:
+        "200": {$ref: "#/components/responses/Success"}
+        "404": {$ref: "#/components/responses/NotFound"}
+    patch:
+      tags: [Tasks]
+      operationId: updateTask
+      summary: Edit or auto-save a task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/TaskPatch"}
+      responses:
+        "200": {$ref: "#/components/responses/Success"}
+        "409": {description: Version conflict}
+    delete:
+      tags: [Tasks]
+      operationId: deleteTask
+      summary: Delete a task and its attachments
+      responses:
+        "204": {description: Task deleted}
+  /tasks/{taskId}/attachments/upload-url:
+    parameters:
+      - {$ref: "#/components/parameters/TaskId"}
+    post:
+      tags: [Attachments]
+      operationId: createAttachmentUploadUrl
+      summary: Create a temporary S3 upload URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/UploadInput"}
+      responses:
+        "201": {$ref: "#/components/responses/Success"}
+  /tasks/{taskId}/attachments:
+    parameters:
+      - {$ref: "#/components/parameters/TaskId"}
+    get:
+      tags: [Attachments]
+      operationId: listAttachments
+      summary: List attachment metadata and temporary download URLs
+      responses:
+        "200": {$ref: "#/components/responses/Success"}
+  /tasks/{taskId}/attachments/{attachmentId}/confirm:
+    parameters:
+      - {$ref: "#/components/parameters/TaskId"}
+      - {$ref: "#/components/parameters/AttachmentId"}
+    post:
+      tags: [Attachments]
+      operationId: confirmAttachmentUpload
+      summary: Confirm that S3 received an attachment
+      responses:
+        "200": {$ref: "#/components/responses/Success"}
+        "409": {description: Upload not found in S3}
+  /tasks/{taskId}/attachments/{attachmentId}:
+    parameters:
+      - {$ref: "#/components/parameters/TaskId"}
+      - {$ref: "#/components/parameters/AttachmentId"}
+    delete:
+      tags: [Attachments]
+      operationId: deleteAttachment
+      summary: Delete attachment metadata and the S3 object
+      responses:
+        "204": {description: Attachment deleted}
+  /statuses:
+    get:
+      tags: [Workflow]
+      operationId: listStatuses
+      responses:
+        "200": {$ref: "#/components/responses/Success"}
+    post:
+      tags: [Workflow]
+      operationId: createStatus
+      requestBody: {$ref: "#/components/requestBodies/NamedEntity"}
+      responses:
+        "201": {$ref: "#/components/responses/Success"}
+  /statuses/order:
+    patch:
+      tags: [Workflow]
+      operationId: reorderStatuses
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [statusIds]
+              properties:
+                statusIds:
+                  type: array
+                  items: {type: string}
+      responses:
+        "200": {$ref: "#/components/responses/Success"}
+  /statuses/{statusId}:
+    parameters:
+      - {$ref: "#/components/parameters/StatusPathId"}
+    patch:
+      tags: [Workflow]
+      operationId: updateStatus
+      requestBody: {$ref: "#/components/requestBodies/NamedEntity"}
+      responses:
+        "200": {$ref: "#/components/responses/Success"}
+    delete:
+      tags: [Workflow]
+      operationId: deleteStatus
+      responses:
+        "204": {description: Status deleted}
+        "409": {description: Status is still assigned to tasks}
+  /categories:
+    get:
+      tags: [Workflow]
+      operationId: listCategories
+      responses:
+        "200": {$ref: "#/components/responses/Success"}
+    post:
+      tags: [Workflow]
+      operationId: createCategory
+      requestBody: {$ref: "#/components/requestBodies/NamedEntity"}
+      responses:
+        "201": {$ref: "#/components/responses/Success"}
+  /categories/{categoryId}:
+    parameters:
+      - {$ref: "#/components/parameters/CategoryPathId"}
+    patch:
+      tags: [Workflow]
+      operationId: updateCategory
+      requestBody: {$ref: "#/components/requestBodies/NamedEntity"}
+      responses:
+        "200": {$ref: "#/components/responses/Success"}
+    delete:
+      tags: [Workflow]
+      operationId: deleteCategory
+      responses:
+        "204": {description: Category deleted}
+        "409": {description: Category is still assigned to tasks}
+  /filters:
+    get:
+      tags: [Filters]
+      operationId: listFilters
+      responses:
+        "200": {$ref: "#/components/responses/Success"}
+    post:
+      tags: [Filters]
+      operationId: createFilter
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/FilterInput"}
+      responses:
+        "201": {$ref: "#/components/responses/Success"}
+  /filters/{filterId}:
+    parameters:
+      - {$ref: "#/components/parameters/FilterPathId"}
+    patch:
+      tags: [Filters]
+      operationId: updateFilter
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/FilterInput"}
+      responses:
+        "200": {$ref: "#/components/responses/Success"}
+    delete:
+      tags: [Filters]
+      operationId: deleteFilter
+      responses:
+        "204": {description: Filter deleted}
+  /imports/preview:
+    post:
+      tags: [ImportExport]
+      operationId: previewImport
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [format, content]
+              properties:
+                format: {type: string, enum: [json, csv]}
+                content: {type: string}
+      responses:
+        "200": {$ref: "#/components/responses/Success"}
+  /imports/confirm:
+    post:
+      tags: [ImportExport]
+      operationId: confirmImport
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tasks]
+              properties:
+                tasks:
+                  type: array
+                  maxItems: 500
+                  items: {$ref: "#/components/schemas/TaskInput"}
+      responses:
+        "201": {$ref: "#/components/responses/Success"}
+  /exports/tasks:
+    get:
+      tags: [ImportExport]
+      operationId: exportTasks
+      parameters:
+        - name: format
+          in: query
+          schema: {type: string, enum: [json, csv], default: json}
+      responses:
+        "200": {description: Exported task data}
+  /statistics:
+    get:
+      tags: [Statistics]
+      operationId: getStatistics
+      parameters:
+        - {$ref: "#/components/parameters/GroupBy"}
+      responses:
+        "200": {$ref: "#/components/responses/Success"}
+  /statistics/export:
+    get:
+      tags: [Statistics]
+      operationId: exportStatistics
+      parameters:
+        - {$ref: "#/components/parameters/GroupBy"}
+        - name: format
+          in: query
+          schema: {type: string, enum: [json, csv], default: json}
+      responses:
+        "200": {description: Exported statistics}
+components:
+  securitySchemes:
+    CognitoBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    TaskId:
+      name: taskId
+      in: path
+      required: true
+      schema: {type: string}
+    AttachmentId:
+      name: attachmentId
+      in: path
+      required: true
+      schema: {type: string}
+    StatusPathId:
+      name: statusId
+      in: path
+      required: true
+      schema: {type: string}
+    CategoryPathId:
+      name: categoryId
+      in: path
+      required: true
+      schema: {type: string}
+    FilterPathId:
+      name: filterId
+      in: path
+      required: true
+      schema: {type: string}
+    Search:
+      name: search
+      in: query
+      schema: {type: string}
+    StatusId:
+      name: statusId
+      in: query
+      schema: {type: string}
+    CategoryId:
+      name: categoryId
+      in: query
+      schema: {type: string}
+    Date:
+      name: date
+      in: query
+      schema: {type: string, format: date}
+    FromDate:
+      name: fromDate
+      in: query
+      schema: {type: string, format: date}
+    ToDate:
+      name: toDate
+      in: query
+      schema: {type: string, format: date}
+    BeforeDate:
+      name: beforeDate
+      in: query
+      schema: {type: string, format: date}
+    FilterId:
+      name: filterId
+      in: query
+      schema: {type: string}
+    RecordState:
+      name: recordState
+      in: query
+      schema: {type: string, enum: [DRAFT, ACTIVE]}
+    SortBy:
+      name: sortBy
+      in: query
+      schema: {type: string, enum: [updatedAt, createdAt, date, title], default: updatedAt}
+    Order:
+      name: order
+      in: query
+      schema: {type: string, enum: [asc, desc], default: desc}
+    GroupBy:
+      name: groupBy
+      in: query
+      schema: {type: string, enum: [status, category, time]}
+  requestBodies:
+    NamedEntity:
+      required: true
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/NamedEntityInput"}
+  schemas:
+    ProfileInput:
+      type: object
+      additionalProperties: false
+      properties:
+        displayName: {type: string, maxLength: 100}
+        preferredView: {type: string, enum: [LIST, KANBAN, TIMELINE, CALENDAR]}
+        email: {type: string, format: email}
+    TaskInput:
+      type: object
+      additionalProperties: false
+      properties:
+        title: {type: string, maxLength: 200}
+        description: {type: string, maxLength: 100000}
+        recordState: {type: string, enum: [DRAFT, ACTIVE]}
+        statusId: {type: string, nullable: true}
+        categoryId: {type: string, nullable: true}
+        date: {type: string, format: date, nullable: true}
+        startDate: {type: string, format: date, nullable: true}
+    TaskPatch:
+      allOf:
+        - {$ref: "#/components/schemas/TaskInput"}
+        - type: object
+          properties:
+            expectedVersion: {type: integer, minimum: 1}
+    NamedEntityInput:
+      type: object
+      properties:
+        name: {type: string, maxLength: 100}
+        color: {type: string, example: "#3B82F6"}
+    FilterCondition:
+      type: object
+      required: [field, operator]
+      properties:
+        field:
+          type: string
+          enum: [title, statusId, categoryId, date, startDate, recordState]
+        operator:
+          type: string
+          enum: [EQUALS, NOT_EQUALS, CONTAINS, BEFORE, AFTER, BETWEEN, IN, IS_EMPTY]
+        value: {}
+    FilterInput:
+      type: object
+      properties:
+        name: {type: string, maxLength: 100}
+        logic: {type: string, enum: [AND, OR]}
+        conditions:
+          type: array
+          minItems: 1
+          maxItems: 20
+          items: {$ref: "#/components/schemas/FilterCondition"}
+    UploadInput:
+      type: object
+      required: [fileName, contentType, size]
+      properties:
+        fileName: {type: string}
+        contentType: {type: string, enum: [image/jpeg, image/png, image/webp, image/gif]}
+        size: {type: integer, minimum: 1, maximum: 10485760}
+    AvatarUploadInput:
+      type: object
+      required: [fileName, contentType, size]
+      properties:
+        fileName: {type: string}
+        contentType: {type: string, enum: [image/jpeg, image/png, image/webp]}
+        size: {type: integer, minimum: 1, maximum: 5242880}
+    Error:
+      type: object
+      required: [message]
+      properties:
+        message: {type: string}
+        details: {}
+  responses:
+    Success:
+      description: Successful response
+      content:
+        application/json:
+          schema: {type: object}
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/Error"}
+    NotFound:
+      description: Owned resource not found
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/Error"}
