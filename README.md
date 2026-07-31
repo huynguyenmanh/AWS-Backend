@@ -27,12 +27,7 @@ todo-api-project/
 │   ├── statistics.py
 │   ├── tasks.py
 │   └── transfer.py
-├── tests/
-│   ├── conftest.py
-│   └── test_*.py
 ├── .gitignore
-├── pytest.ini
-├── requirements-test.txt
 └── README.md
 ```
 
